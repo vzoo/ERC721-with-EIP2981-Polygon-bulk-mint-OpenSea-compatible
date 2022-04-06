@@ -1,0 +1,42 @@
+{
+  "name": "erc721-with-eip2981-polygon-bulk-mint-opensea-compatible",
+  "version": "1.0.1",
+  "description": "VZOO NFTs ERC-721 Smart Contract",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \\\"Error: no test specified\\\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vzoo/ERC721-with-EIP2981-Polygon-bulk-mint-OpenSea-compatible.git"
+  },
+  "keywords": [
+    "vzoo",
+    "virtualzoo",
+    "nft",
+    "opensea",
+    "erc721",
+    "eip2981",
+    "smartcontract",
+    "polygon",
+    "matic",
+    "mumbai"
+  ],
+  "author": "VZOO",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vzoo/ERC721-with-EIP2981-Polygon-bulk-mint-OpenSea-compatible/issues"
+  },
+  "homepage": "https://github.com/vzoo/ERC721-with-EIP2981-Polygon-bulk-mint-OpenSea-compatible/#readme",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.5",
+    "@nomiclabs/hardhat-etherscan": "^3.0.3",
+    "ethers": "^5.0.0",
+    "hardhat": "^2.9.2",
+    "node-fetch": "^2.6.7"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.5.0",
+    "dotenv": "^16.0.0"
+  }
+}

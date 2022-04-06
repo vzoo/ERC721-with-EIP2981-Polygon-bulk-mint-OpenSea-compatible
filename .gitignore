@@ -1,3 +1,15 @@
+cache
+artifacts
+node_modules
+images
+images.car
+metadata
+metadata.car
+contract-images
+contract-metadata
+contract-images.car
+contract-metadata.car
+
 # Logs
 logs
 *.log
