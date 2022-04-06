@@ -86,6 +86,9 @@ The output should look like this:
 
 Take a note of the new contract address, we'll need it for the next step.
 
+## Sale
+Call `toggleSaleState()` on the contract to enable public sale - call `saleState()` to check result.
+
 # 5. Verify contract on Etherscan/Polyscan
 Make sure you set up the correct API keys for Etherscan and/or Polyscan - Hardhat will automatically verify the contract based on the chosen network, so you can have both API keys in place at the same time.
 
@@ -100,9 +103,9 @@ For convenience and a more efficient verification process you can flatten your s
 
 Run `npx hardhat flatten` to flatten all files, or `npx hardhat flatten FILENAME_HERE.sol` to flatten a single file.
 
-Pay attention to the licenses, there should only be one license description in the whole file - so find and replace all `// SPDX-License-Identifier: <YOUR-LICENSE>` with ` ` and remember to leave one at the top of your flattened file.
+Pay attention to the licenses, there should only be one license description in the whole file - so find and replace all `// SPDX-License-Identifier: <YOUR-LICENSE>` with ` `, but remember to leave one at the top of your flattened file.
 
-Copy the contents of the file into Remix IDE, set the right compiler version (0.8.9) and compile the contract.
+Copy the contents of the file into a new file created in Remix IDE, set the correct compiler version (0.8.9) and compile the contract.
 
 Next, choose which network you want to use (select `Injected Web3` as your Environment) and deploy directly from Remix IDE.
 
@@ -119,6 +122,8 @@ To encode the data:
 		3. Type: String <CONTRACT_URI>
 3. Copy the output and put it into the appropriate field in the verification form on Polyscan
 4. Verify your contract
+
+If you have any problem with Hardhat not compiling or verifying correctly, try to run `npx hardhat clean`.
 
 ***GOOD LUCK and have a nice day!***
 

@@ -9,6 +9,7 @@ contract-images
 contract-metadata
 contract-images.car
 contract-metadata.car
+VZOOflat.sol
 
 # Logs
 logs
