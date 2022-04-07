@@ -13,8 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./common/meta-transactions/ContentMixin.sol";
 import "./common/meta-transactions/NativeMetaTransaction.sol";
 
-/// @title VZOO contract
-/// @dev Extends ERC721 Non-Fungible Token Standard and implements EIP-2981 NFT Royalty Standard
+/// @title VZOO NFT contract
 abstract contract VZOOERC721 is
     ERC721Enumerable,
     ERC721URIStorage,
@@ -41,7 +40,7 @@ abstract contract VZOOERC721 is
     uint256 private _maxNFTPerAddress = 36;
     uint256 private _price = 0.1 ether;
     address public _proxyRegistryAddress;
-    string public baseExtension = "";
+    string private _baseExtension = "";
     bool private _saleActive = false;
     /// @dev Required by EIP-2981: NFT Royalty Standard
     address private _receiver;
@@ -52,6 +51,7 @@ abstract contract VZOOERC721 is
 
     /// Five options for bulk minting
     uint256 private NUM_OPTIONS = 5;
+    uint256 private numItemsAllocated;
 
     uint256 private COMMON_OPTION = 0;
     uint256 private UNCOMMON_OPTION = 1;
@@ -81,21 +81,15 @@ abstract contract VZOOERC721 is
     ) ERC721(_nameERC721, _symbolERC721) {
         _initializeEIP712(_nameERC721);
         setProxyRegistryAddress(_initProxyRegistryAddress);
-        setBaseURI(_initBaseURI);
+        setBaseTokenURI(_initBaseURI);
         setContractURI(_initContractURI);
         _name = _nameERC721;
         _symbol = _symbolERC721;
         _nextTokenId.increment();
-        /// @dev Default royalties
+        /// @dev Set default royalties for EIP-2981
         _receiver = owner();
         _feeNumerator = 1000;
         _setDefaultRoyalty(_receiver, _feeNumerator);
-    }
-
-    /// Internal function to return the currently set base URI
-    /// @return baseURI base URI for building the tokenURI
-    function _baseURI() internal view virtual override returns (string memory) {
-        return baseURI;
     }
 
     /// Mints next token id to an address
@@ -117,10 +111,10 @@ abstract contract VZOOERC721 is
         whenNotPaused
     {
         require(canMint(_optionId), "total supply limit reached");
+        require(canMintAndOwn(_toAddress, numItemsAllocated));
 
         if (_msgSender() != owner()) {
             require(_saleActive);
-            require(canMintAndOwn(_toAddress));
         }
 
         if (_optionId == COMMON_OPTION) {
@@ -151,19 +145,8 @@ abstract contract VZOOERC721 is
         }
     }
 
-    /// Public function to receive the current sale state
-    /// @return Boolean current state of the sale
-    function saleState() external view returns (bool) {
-        return _saleActive;
-    }
-
-    // Owner toggle for sale state
-    function toggleSaleState() external onlyOwner {
-        _saleActive = !_saleActive;
-    }
-
     /// Checks the value of a transaction
-    /// @param value message transaction value
+    /// @param value of the transaction message
     /// @param numOption number of NFTs requested for bulk minting
     function checkValue(uint256 value, uint256 numOption)
         internal
@@ -171,19 +154,19 @@ abstract contract VZOOERC721 is
         returns (bool)
     {
         if (_msgSender() != owner()) {
-            require(value >= (numOption * price()), "amount is not correct");
+            require(value >= (numOption * price()), "transfer amount is not correct");
         }
         return true;
     }
 
     /// Checks if tx exceeds total supply
     /// @param _optionId bulk mint option id
-    /// @return Boolean "true" if requested bulk mint amount can be minted, "false" if it exceeds max supply
-    function canMint(uint256 _optionId) public view returns (bool) {
+    /// @return Boolean true if requested bulk amount can be minted, false if it exceeds max supply
+    function canMint(uint256 _optionId) public returns (bool) {
         if (_optionId >= NUM_OPTIONS) {
             return false;
         }
-        uint256 numItemsAllocated = 0;
+        numItemsAllocated = 0;
         if (_optionId == COMMON_OPTION) {
             numItemsAllocated = NUM_COMMON_OPTION;
         } else if (_optionId == UNCOMMON_OPTION) {
@@ -198,32 +181,36 @@ abstract contract VZOOERC721 is
         return totalSupply() <= (maxSupply() - numItemsAllocated);
     }
 
-    /// @dev Ensures _toAddress does not exceed allowed mints and total owning limits per address
+    /// Ensures _toAddress does not exceed allowed mints and total owning limit per address
     /// @param _toAddress address of the future owner of the token
-    /// @return Boolean "true" if minted balance and owning limit not exceeded, "false" if it exceeds allowed limits
-    function canMintAndOwn(address _toAddress) public view returns (bool) {
+    /// @param requestedNumItemsAllocated number of requested NFTs for bulk minting
+    /// @return Boolean true if minting and owning limits not exceeded, otherwise return false
+    function canMintAndOwn(
+        address _toAddress,
+        uint256 requestedNumItemsAllocated
+    ) public view returns (bool) {
         uint256 mintedBalance = addressMintedBalance[_toAddress];
         if (_toAddress == owner()) {
             require(
-                mintedBalance + 1 <= maxMintTeam(),
+                mintedBalance + requestedNumItemsAllocated <= maxMintTeam(),
                 "mint limit for team exceeded"
             );
             return true;
         }
         uint256 addressBalance = balanceOf(_toAddress);
         require(
-            mintedBalance + 1 <= maxMintPerAddress(),
+            mintedBalance + requestedNumItemsAllocated <= maxMintPerAddress(),
             "mint limit for address exceeded"
         );
         require(
-            addressBalance + 1 <= maxNFTPerAddress(),
+            addressBalance + requestedNumItemsAllocated <= maxNFTPerAddress(),
             "allowed amount of NFTs for an address exceeded"
         );
         return true;
     }
 
     /// Returns an array of token ids for _owner address
-    /// @return tokenIds array
+    /// @return tokenIds array of token ids for an address
     function walletOfOwner(address _owner)
         public
         view
@@ -235,12 +222,6 @@ abstract contract VZOOERC721 is
             tokenIds[i] = tokenOfOwnerByIndex(_owner, i);
         }
         return tokenIds;
-    }
-
-    /// Public function to receive the base token URI
-    /// @return baseURI to build the token URI
-    function baseTokenURI() public view returns (string memory) {
-        return baseURI;
     }
 
     /// External function to receive the name of the NFT collection
@@ -255,10 +236,45 @@ abstract contract VZOOERC721 is
         return _symbol;
     }
 
+    /// Returns the max amount of NFTs that can exist
+    /// @return Amount that can exist
+    function maxSupply() public view returns (uint256) {
+        return MAX_SUPPLY;
+    }
+
     /// External function to receive the price for minting one NFT
     /// @return Price for one NFT
     function price() public view returns (uint256) {
         return _price;
+    }
+
+    /// Sets a new base price for the collection
+    /// @param _newPrice value of the new price
+    function setPrice(uint256 _newPrice) external onlyOwner {
+        _price = _newPrice;
+    }
+
+    /// Public function to receive the current sale state
+    /// @return Boolean current state of the sale
+    function saleState() external view returns (bool) {
+        return _saleActive;
+    }
+
+    // Owner toggle for sale state
+    function toggleSaleState() external onlyOwner {
+        _saleActive = !_saleActive;
+    }
+
+    /// Public function to receive the base token URI
+    /// @return baseURI to build the token URI
+    function baseTokenURI() public view returns (string memory) {
+        return baseURI;
+    }
+
+    /// Sets a new base URI for the NFTs
+    /// @param _newBaseURI the new URI to use as a base
+    function setBaseTokenURI(string memory _newBaseURI) public onlyOwner {
+        baseURI = _newBaseURI;
     }
 
     /// Public function to receive the base contract URI
@@ -267,22 +283,16 @@ abstract contract VZOOERC721 is
         return baseContractURI;
     }
 
+    /// Helper for the owner of the contract to set a new contract URI
+    /// @param _newContractURI new URI for the contract
+    function setContractURI(string memory _newContractURI) public onlyOwner {
+        baseContractURI = _newContractURI;
+    }
+
     /// Public function to receive the amount of NFTs allowed per address
     /// @return Amount of allowed NFTs per address
     function maxNFTPerAddress() public view returns (uint256) {
         return _maxNFTPerAddress;
-    }
-
-    /// Public function to receive the amount of NFT mints allowed for the team
-    /// @return Amount of allowed NFT mints for the team
-    function maxMintTeam() public view returns (uint256) {
-        return _maxMintTeam;
-    }
-
-    /// Public function to receive the amount of NFT mints allowed per address
-    /// @return Amount of allowed NFT mints per address
-    function maxMintPerAddress() public view returns (uint256) {
-        return _maxMintPerAddress;
     }
 
     /// Sets the allowed amount of NFTs per address
@@ -294,6 +304,24 @@ abstract contract VZOOERC721 is
         _maxNFTPerAddress = _newMaxNFTPerAddress;
     }
 
+    /// Public function to receive the amount of NFT mints allowed for the team
+    /// @return Amount of allowed NFT mints for the team
+    function maxMintTeam() public view returns (uint256) {
+        return _maxMintTeam;
+    }
+
+    /// Sets the allowed amount of minted NFTs for the team
+    /// @param _newMaxMintTeam new amount allowed to mint
+    function setMaxMintTeam(uint256 _newMaxMintTeam) external onlyOwner {
+        _maxMintTeam = _newMaxMintTeam;
+    }
+
+    /// Public function to receive the amount of NFT mints allowed per address
+    /// @return Amount of allowed NFT mints per address
+    function maxMintPerAddress() public view returns (uint256) {
+        return _maxMintPerAddress;
+    }
+
     /// Sets the allowed amount of minted NFTs per address
     /// @param _newMaxMintPerAddress new amount allowed to mint
     function setMaxMintPerAddress(uint256 _newMaxMintPerAddress)
@@ -303,13 +331,9 @@ abstract contract VZOOERC721 is
         _maxMintPerAddress = _newMaxMintPerAddress;
     }
 
-    /// Sets the allowed amount of minted NFTs for the team
-    /// @param _newMaxMintTeam new amount allowed to mint
-    function setMaxMintPerAddressTeam(uint256 _newMaxMintTeam)
-        external
-        onlyOwner
-    {
-        _maxMintTeam = _newMaxMintTeam;
+    /// Receives the currently set base extension for metadata
+    function baseExtension() public view returns (string memory) {
+        return _baseExtension;
     }
 
     /// Sets a new base extension for the metadata
@@ -319,19 +343,7 @@ abstract contract VZOOERC721 is
         public
         onlyOwner
     {
-        baseExtension = _newBaseExtension;
-    }
-
-    /// Sets a new base URI for the NFTs
-    /// @param _newBaseURI the new URI to use as a base
-    function setBaseURI(string memory _newBaseURI) public onlyOwner {
-        baseURI = _newBaseURI;
-    }
-
-    /// Helper for the owner of the contract to set a new contract URI
-    /// @param _newContractURI new URI for the contract
-    function setContractURI(string memory _newContractURI) public onlyOwner {
-        baseContractURI = _newContractURI;
+        _baseExtension = _newBaseExtension;
     }
 
     /// External function to set a new proxy registry address
@@ -344,7 +356,7 @@ abstract contract VZOOERC721 is
     }
 
     /// Sets the default royalty address and fee
-    /// @dev feeNumerator defaults to "1000" = 10% of transaction value
+    /// @dev feeNumerator defaults to 1000 = 10% of transaction value
     /// @param receiver wallet address of new receiver
     /// @param feeNumerator new fee numerator
     function setDefaultRoyalty(address receiver, uint96 feeNumerator)
@@ -354,25 +366,20 @@ abstract contract VZOOERC721 is
         _setDefaultRoyalty(receiver, feeNumerator);
     }
 
-    /// Sets a new base price for the collection
-    /// @param _newPrice value of the new price
-    function setPrice(uint256 _newPrice) external onlyOwner {
-        _price = _newPrice;
-    }
-
     /// Allow or deny override of _msgSender
-    /// @param isAllowed "true" to allow override, "false" to deny it
+    /// @param isAllowed true to allow override, false to deny it
     function setSecAllowMsgSenderOverride(bool isAllowed) external onlyOwner {
         _secAllowMsgSenderOverride = isAllowed;
     }
 
     /// Allow or deny override of _msgSender
-    /// @param isAllowed "true" to allow override, "false" to deny it
+    /// @param isAllowed true to allow override, false to deny it
     function setSecAllowIsApprovedForAll(bool isAllowed) external onlyOwner {
         _secAllowIsApprovedForAll = isAllowed;
     }
 
     /// Clears the royalty information for a token
+    /// @dev Required override to comply with EIP-2981
     /// @param tokenId the NFT id to burn royalty information for
     function _burn(uint256 tokenId)
         internal
@@ -381,12 +388,6 @@ abstract contract VZOOERC721 is
         onlyOwner
     {
         super._burn(tokenId);
-    }
-
-    /// Returns the max amount of NFTs that can exist
-    /// @return Amount that can exist
-    function maxSupply() public view returns (uint256) {
-        return MAX_SUPPLY;
     }
 
     /// Pauses the contract
@@ -420,21 +421,21 @@ abstract contract VZOOERC721 is
             "ERC721Metadata: URI query for nonexistent token"
         );
 
-        string memory currentBaseURI = _baseURI();
+        string memory currentBaseURI = baseTokenURI();
+        string memory currentBaseExtension = baseExtension();
         return
             bytes(currentBaseURI).length > 0
                 ? string(
                     abi.encodePacked(
                         currentBaseURI,
                         tokenId.toString(),
-                        baseExtension
+                        currentBaseExtension
                     )
                 )
                 : "";
     }
 
-    /// Intercepts all transfers to check for max allowed balance of receiver
-    /// @dev Hook into token transfers to ensure receiver "to" does not exceed max NFT address limit
+    /// Intercepts all transfers to ensure receiver does not exceed max allowed balance
     /// @param from wallet address to send the NFT from
     /// @param to wallet address to send the NFT to
     /// @param tokenId NFT id to transfer
@@ -452,13 +453,30 @@ abstract contract VZOOERC721 is
         }
     }
 
-    /// If allowed, this is used instead of msg.sender as transactions won't be sent by the original token owner, but by OpenSea
+    /// If allowed, this is used instead of msg.sender as transactions won't be sent by the original token owner, but by the NFT marketplace
     /// @return sender of the message
     function _msgSender() internal view override returns (address sender) {
         if (_secAllowMsgSenderOverride) {
             return ContextMixin.msgSender();
         }
         return super._msgSender();
+    }
+
+    /// If allowed, override isApprovedForAll to whitelist user's marketplace proxy accounts to enable gas-less listings
+    function isApprovedForAll(address owner, address operator)
+        public
+        view
+        override(ERC721)
+        returns (bool)
+    {
+        if (
+            address(_proxyRegistryAddress) == operator &&
+            _secAllowIsApprovedForAll
+        ) {
+            return true;
+        }
+
+        return super.isApprovedForAll(owner, operator);
     }
 
     /// Check interface support.
@@ -470,24 +488,6 @@ abstract contract VZOOERC721 is
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
-    }
-
-    /// Override isApprovedForAll to whitelist user's OpenSea proxy accounts to enable gas-less listings
-    function isApprovedForAll(address owner, address operator)
-        public
-        view
-        override(ERC721)
-        returns (bool)
-    {
-        // Whitelist OpenSea proxy contract for easy trading, if allowed
-        if (
-            address(_proxyRegistryAddress) == operator &&
-            _secAllowIsApprovedForAll
-        ) {
-            return true;
-        }
-
-        return super.isApprovedForAll(owner, operator);
     }
 
     /// Withdraw all funds from the contract

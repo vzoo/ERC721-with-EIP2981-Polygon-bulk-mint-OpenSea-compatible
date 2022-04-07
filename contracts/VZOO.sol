@@ -22,7 +22,7 @@ pragma solidity ^0.8.9;
 import "./VZOOERC721.sol";
 
 /// @title VZOO contract
-/// @dev Extends ERC721 Non-Fungible token standard implementation
+/// @dev Extends ERC-721 Non-Fungible Token Standard and implements EIP-2981 NFT Royalty Standard
 contract VZOO is VZOOERC721 {
     string public NAME = "<ERC721_COLLECTION_NAME_HERE>";
     string public SYMBOL = "<ERC721_COLLECTION_SYMBOL_HERE>";
