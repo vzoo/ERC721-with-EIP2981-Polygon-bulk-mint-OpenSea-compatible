@@ -24,8 +24,8 @@ import "./VZOOERC721.sol";
 /// @title VZOO contract
 /// @dev Extends ERC721 Non-Fungible token standard implementation
 contract VZOO is VZOOERC721 {
-    string public NAME = "VZOO Gorilla";
-    string public SYMBOL = "VZOO";
+    string public NAME = "<ERC721_COLLECTION_NAME_HERE>";
+    string public SYMBOL = "<ERC721_COLLECTION_SYMBOL_HERE>";
     constructor(address _initProxyRegistryAddress, string memory _initBaseURI, string memory _initContractURI)
         VZOOERC721(
             NAME,

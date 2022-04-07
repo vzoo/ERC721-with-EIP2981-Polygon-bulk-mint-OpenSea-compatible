@@ -14,7 +14,7 @@ import "./common/meta-transactions/ContentMixin.sol";
 import "./common/meta-transactions/NativeMetaTransaction.sol";
 
 /// @title VZOO contract
-/// @dev Extends ERC721 Non-Fungible Token Standard basic implementation
+/// @dev Extends ERC721 Non-Fungible Token Standard and implements EIP-2981 NFT Royalty Standard
 abstract contract VZOOERC721 is
     ERC721Enumerable,
     ERC721URIStorage,
@@ -27,48 +27,49 @@ abstract contract VZOOERC721 is
     using Counters for Counters.Counter;
     using Strings for uint256;
 
-    /// Can be changed after deployment
-    string private baseURI;
-    string private baseContractURI;
-
-    /// @dev Five options for minting
-    uint256 NUM_OPTIONS = 5;
-
-    uint256 COMMON_OPTION = 0;
-    uint256 UNCOMMON_OPTION = 1;
-    uint256 RARE_OPTION = 2;
-    uint256 EPIC_OPTION = 3;
-    uint256 LEGENDARY_OPTION = 4;
-
-    uint256 NUM_COMMON_OPTION = 1;
-    uint256 NUM_UNCOMMON_OPTION = 3;
-    uint256 NUM_RARE_OPTION = 9;
-    uint256 NUM_EPIC_OPTION = 18;
-    uint256 NUM_LEGENDARY_OPTION = 36;
-
-    uint256 private _price = 0.1 ether;
-    bool private _saleActive = false;
-
-    /// Enforce the existence of 10.000 VZOO Collection #1 NFTs and set limits
-    uint256 public MAX_SUPPLY = 100;
-    uint256 private MAX_MINT_TEAM = 20;
+    /// Enforce the existence of 10.000 VZOO Gorilla NFTs
+    uint256 public MAX_SUPPLY = 10000;
 
     string private _name;
-    string private _symbol; 
+    string private _symbol;
 
-    /// Can be changed after deployment
-    uint256 private _maxMintPerAddress = 20;
-    uint256 private _maxNFTPerAddress = 22;
+    /// @dev Can be changed after deployment
+    string private baseURI;
+    string private baseContractURI;
+    uint256 private _maxMintTeam = 5000;
+    uint256 private _maxMintPerAddress = 36;
+    uint256 private _maxNFTPerAddress = 36;
+    uint256 private _price = 0.1 ether;
     address public _proxyRegistryAddress;
+    string public baseExtension = "";
+    bool private _saleActive = false;
+    /// @dev Required by EIP-2981: NFT Royalty Standard
     address private _receiver;
     uint96 private _feeNumerator;
-    string public baseExtension = "";
+    /// @dev Security considerations can be changed after deployment
+    bool private _secAllowMsgSenderOverride = true;
+    bool private _secAllowIsApprovedForAll = true;
+
+    /// Five options for bulk minting
+    uint256 private NUM_OPTIONS = 5;
+
+    uint256 private COMMON_OPTION = 0;
+    uint256 private UNCOMMON_OPTION = 1;
+    uint256 private RARE_OPTION = 2;
+    uint256 private EPIC_OPTION = 3;
+    uint256 private LEGENDARY_OPTION = 4;
+
+    uint256 private NUM_COMMON_OPTION = 1;
+    uint256 private NUM_UNCOMMON_OPTION = 3;
+    uint256 private NUM_RARE_OPTION = 9;
+    uint256 private NUM_EPIC_OPTION = 18;
+    uint256 private NUM_LEGENDARY_OPTION = 36;
 
     /// @dev Keeps track of wallet addresses that took part in minting our NFTs
     mapping(address => uint256) public addressMintedBalance;
 
-    /// Track nextTokenId instead of currentTokenId to save users on gas costs
-    /// @dev Relies on the OpenZeppelin Counter to keep track of the next available ID
+    /// Track nextTokenId instead of currentTokenId to save on gas costs
+    /// @dev Uses OpenZeppelin Counter to track the next available ID
     Counters.Counter private _nextTokenId;
 
     constructor(
@@ -91,15 +92,15 @@ abstract contract VZOOERC721 is
         _setDefaultRoyalty(_receiver, _feeNumerator);
     }
 
-    /// Internal override
-    /// @return baseURI URI to build the token URI
+    /// Internal function to return the currently set base URI
+    /// @return baseURI base URI for building the tokenURI
     function _baseURI() internal view virtual override returns (string memory) {
         return baseURI;
     }
 
-    /// Mints a token to an address with a tokenURI
-    /// @param _to Address of the future owner of the token
-    function mintTo(address _to) private {
+    /// Mints next token id to an address
+    /// @param _to address of the future token owner
+    function mintTo(address _to) internal {
         uint256 currentTokenId = _nextTokenId.current();
         require(currentTokenId <= maxSupply(), "total supply limit reached");
         addressMintedBalance[_to]++;
@@ -107,9 +108,9 @@ abstract contract VZOOERC721 is
         _safeMint(_to, currentTokenId);
     }
 
-    /// @dev Bulk mints to an address
-    /// @param _optionId ID of the minting option
-    /// @param _toAddress Address of the future owner of the token
+    /// Bulk mints NFTs to an address
+    /// @param _optionId bulk minting option id
+    /// @param _toAddress address of the future token owner
     function mintOptionTo(uint256 _optionId, address _toAddress)
         external
         payable
@@ -151,7 +152,7 @@ abstract contract VZOOERC721 is
     }
 
     /// Public function to receive the current sale state
-    /// @return Boolean the current state of the sale
+    /// @return Boolean current state of the sale
     function saleState() external view returns (bool) {
         return _saleActive;
     }
@@ -163,21 +164,21 @@ abstract contract VZOOERC721 is
 
     /// Checks the value of a transaction
     /// @param value message transaction value
-    /// @param option option id for bulk minting
-    function checkValue(uint256 value, uint256 option)
-        private
+    /// @param numOption number of NFTs requested for bulk minting
+    function checkValue(uint256 value, uint256 numOption)
+        internal
         view
         returns (bool)
     {
         if (_msgSender() != owner()) {
-            require(value >= (option * price()), "amount is not correct");
+            require(value >= (numOption * price()), "amount is not correct");
         }
         return true;
     }
 
     /// Checks if tx exceeds total supply
-    /// @param _optionId id of item(s) to mint
-    /// @return Boolean "true" if requested amount can be minted and "false" if it exceeds max supply
+    /// @param _optionId bulk mint option id
+    /// @return Boolean "true" if requested bulk mint amount can be minted, "false" if it exceeds max supply
     function canMint(uint256 _optionId) public view returns (bool) {
         if (_optionId >= NUM_OPTIONS) {
             return false;
@@ -204,7 +205,7 @@ abstract contract VZOOERC721 is
         uint256 mintedBalance = addressMintedBalance[_toAddress];
         if (_toAddress == owner()) {
             require(
-                mintedBalance + 1 <= maxMintPerAddressTeam(),
+                mintedBalance + 1 <= maxMintTeam(),
                 "mint limit for team exceeded"
             );
             return true;
@@ -237,31 +238,31 @@ abstract contract VZOOERC721 is
     }
 
     /// Public function to receive the base token URI
-    /// @return baseURI URI to build the token URI
+    /// @return baseURI to build the token URI
     function baseTokenURI() public view returns (string memory) {
         return baseURI;
     }
 
-    /// External function to receive the name of this contract
-    /// @return Name of this contract
+    /// External function to receive the name of the NFT collection
+    /// @return Name of the NFT collection
     function name() public view override returns (string memory) {
         return _name;
     }
 
-    /// External function to receive the symbol of this contract
-    /// @return Symbol of this contract
+    /// External function to receive the symbol of the NFT collection
+    /// @return Symbol of the NFT collection
     function symbol() public view override returns (string memory) {
         return _symbol;
     }
 
-    /// External function to receive the price of an item
-    /// @return Price for an item
+    /// External function to receive the price for minting one NFT
+    /// @return Price for one NFT
     function price() public view returns (uint256) {
         return _price;
     }
 
     /// Public function to receive the base contract URI
-    /// @return baseContractURI URI to build the contract URI
+    /// @return URI to build the contract URI
     function contractURI() public view returns (string memory) {
         return baseContractURI;
     }
@@ -274,8 +275,8 @@ abstract contract VZOOERC721 is
 
     /// Public function to receive the amount of NFT mints allowed for the team
     /// @return Amount of allowed NFT mints for the team
-    function maxMintPerAddressTeam() public view returns (uint256) {
-        return MAX_MINT_TEAM;
+    function maxMintTeam() public view returns (uint256) {
+        return _maxMintTeam;
     }
 
     /// Public function to receive the amount of NFT mints allowed per address
@@ -294,12 +295,21 @@ abstract contract VZOOERC721 is
     }
 
     /// Sets the allowed amount of minted NFTs per address
-    /// @param _newMaxMintPerAddress new amount allowed mints per address
+    /// @param _newMaxMintPerAddress new amount allowed to mint
     function setMaxMintPerAddress(uint256 _newMaxMintPerAddress)
         external
         onlyOwner
     {
         _maxMintPerAddress = _newMaxMintPerAddress;
+    }
+
+    /// Sets the allowed amount of minted NFTs for the team
+    /// @param _newMaxMintTeam new amount allowed to mint
+    function setMaxMintPerAddressTeam(uint256 _newMaxMintTeam)
+        external
+        onlyOwner
+    {
+        _maxMintTeam = _newMaxMintTeam;
     }
 
     /// Sets a new base extension for the metadata
@@ -334,9 +344,9 @@ abstract contract VZOOERC721 is
     }
 
     /// Sets the default royalty address and fee
-    /// @dev Defaults to "1000" = 10% of transaction value
-    /// @param receiver wallet address of the new receiver
-    /// @param feeNumerator new fee numerator to use
+    /// @dev feeNumerator defaults to "1000" = 10% of transaction value
+    /// @param receiver wallet address of new receiver
+    /// @param feeNumerator new fee numerator
     function setDefaultRoyalty(address receiver, uint96 feeNumerator)
         public
         onlyOwner
@@ -348,6 +358,18 @@ abstract contract VZOOERC721 is
     /// @param _newPrice value of the new price
     function setPrice(uint256 _newPrice) external onlyOwner {
         _price = _newPrice;
+    }
+
+    /// Allow or deny override of _msgSender
+    /// @param isAllowed "true" to allow override, "false" to deny it
+    function setSecAllowMsgSenderOverride(bool isAllowed) external onlyOwner {
+        _secAllowMsgSenderOverride = isAllowed;
+    }
+
+    /// Allow or deny override of _msgSender
+    /// @param isAllowed "true" to allow override, "false" to deny it
+    function setSecAllowIsApprovedForAll(bool isAllowed) external onlyOwner {
+        _secAllowIsApprovedForAll = isAllowed;
     }
 
     /// Clears the royalty information for a token
@@ -362,7 +384,7 @@ abstract contract VZOOERC721 is
     }
 
     /// Returns the max amount of NFTs that can exist
-    /// @return Amount of NFTs that can exist
+    /// @return Amount that can exist
     function maxSupply() public view returns (uint256) {
         return MAX_SUPPLY;
     }
@@ -384,8 +406,8 @@ abstract contract VZOOERC721 is
         return _nextTokenId.current() - 1;
     }
 
-    /// @dev Public function to receive the token URI for an NFTs
-    /// @return URI of the NFT token
+    /// Public function to receive the token URI for an NFT
+    /// @return URI of the token
     function tokenURI(uint256 tokenId)
         public
         view
@@ -412,7 +434,6 @@ abstract contract VZOOERC721 is
     }
 
     /// Intercepts all transfers to check for max allowed balance of receiver
-    /// https://docs.openzeppelin.com/contracts/3.x/extending-contracts#using-hooks
     /// @dev Hook into token transfers to ensure receiver "to" does not exceed max NFT address limit
     /// @param from wallet address to send the NFT from
     /// @param to wallet address to send the NFT to
@@ -431,9 +452,13 @@ abstract contract VZOOERC721 is
         }
     }
 
-    /// This is used instead of msg.sender as transactions won't be sent by the original token owner, but by OpenSea.
+    /// If allowed, this is used instead of msg.sender as transactions won't be sent by the original token owner, but by OpenSea
+    /// @return sender of the message
     function _msgSender() internal view override returns (address sender) {
-        return ContextMixin.msgSender();
+        if (_secAllowMsgSenderOverride) {
+            return ContextMixin.msgSender();
+        }
+        return super._msgSender();
     }
 
     /// Check interface support.
@@ -454,8 +479,11 @@ abstract contract VZOOERC721 is
         override(ERC721)
         returns (bool)
     {
-        // Whitelist OpenSea proxy contract for easy trading
-        if (address(_proxyRegistryAddress) == operator) {
+        // Whitelist OpenSea proxy contract for easy trading, if allowed
+        if (
+            address(_proxyRegistryAddress) == operator &&
+            _secAllowIsApprovedForAll
+        ) {
             return true;
         }
 

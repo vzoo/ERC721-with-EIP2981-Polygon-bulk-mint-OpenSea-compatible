@@ -40,10 +40,12 @@ All settings can be changed, but be aware of the implemented business logic.
 2. `_price` = current sale price per NFT *(can be changed after deployment)*
 3. `_saleActive` = default value for the sale state *(can be changed after deployment)*
 4. `MAX_SUPPLY` = max amount of NFTs that will exist
-5.  `MAX_MINT_TEAM` = max amount of mints allowed for the team
-6.  `_maxMintPerAddress` = max amount of mints per wallet address
-7.  `_maxNFTPerAddress` = max amount of NFTs allowed to own per wallet
-8.  `baseExtension` = metadata base extension (default: "" - empty)
+5.  `_maxMintTeam` = max amount of mints allowed for the team *(can be changed after deployment)*
+6.  `_maxMintPerAddress` = max amount of mints per wallet address *(can be changed after deployment)*
+7.  `_maxNFTPerAddress` = max amount of NFTs allowed to own per wallet *(can be changed after deployment)*
+8.  `baseExtension` = metadata base extension (Default: "" - empty) *(can be changed after deployment)*
+9.  `_receiver` = *Set in constructor*, required by EIP-2981: NFT Royalty Standard (Default: owner) *(can be changed after deployment)*
+10. `_feeNumerator` = *Set in constructor*, required by EIP-2981: NFT Royalty Standard (Default: 1000) *(can be changed after deployment)*
 
 # 3. Handle NFT images and metadata on IPFS
 
