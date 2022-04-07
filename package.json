@@ -1,6 +1,6 @@
 {
   "name": "erc721-with-eip2981-polygon-bulk-mint-opensea-compatible",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "VZOO ERC-721 Smart Contract implementing EIP-2981: NFT Royalty Standard",
   "main": "index.js",
   "scripts": {
