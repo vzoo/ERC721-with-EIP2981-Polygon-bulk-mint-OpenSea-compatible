@@ -13,7 +13,7 @@ task("check-balance", "Prints out the balance of your account").setAction(async 
 
 task("deploy", "Deploys the NFT contract")
     .setAction(async function (taskArguments, hre) {
-        const nftContractFactory = await hre.ethers.getContractFactory("VZOO", getAccount());
+        const nftContractFactory = await hre.ethers.getContractFactory(getEnvVariable("CONTRACT_NAME"), getAccount());
         const nft = await nftContractFactory.deploy(getEnvVariable("PROXY_REGISTRY_ADDRESS"), getEnvVariable("BASE_URI"), getEnvVariable("CONTRACT_URI"));
         console.log(`Contract deployed to address: ${nft.address}`);
     });

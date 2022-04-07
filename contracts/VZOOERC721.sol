@@ -366,13 +366,13 @@ abstract contract VZOOERC721 is
         _setDefaultRoyalty(receiver, feeNumerator);
     }
 
-    /// Allow or deny override of _msgSender
+    /// Allow or deny override of _msgSender for marketplaces
     /// @param isAllowed true to allow override, false to deny it
     function setSecAllowMsgSenderOverride(bool isAllowed) external onlyOwner {
         _secAllowMsgSenderOverride = isAllowed;
     }
 
-    /// Allow or deny override of _msgSender
+    /// Allow or deny override of _msgSender for marketplaces
     /// @param isAllowed true to allow override, false to deny it
     function setSecAllowIsApprovedForAll(bool isAllowed) external onlyOwner {
         _secAllowIsApprovedForAll = isAllowed;

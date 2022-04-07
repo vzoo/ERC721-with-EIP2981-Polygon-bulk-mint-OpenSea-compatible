@@ -97,6 +97,8 @@ Take a note of the new contract address, we'll need it for the next step.
 ## Sale
 Call `toggleSaleState()` on the contract to enable public sale - and call `saleState()` afterwards to verify the result.
 
+Alternatively run `npx hardhat toggleSaleState`.
+
 # 5. Verify contract on Etherscan/Polyscan
 Make sure you set up the correct API keys for Etherscan and/or Polyscan - Hardhat will automatically verify the contract based on the chosen network, so you can have both API keys in place at the same time.
 
