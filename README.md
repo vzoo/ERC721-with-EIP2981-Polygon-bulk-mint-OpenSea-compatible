@@ -5,12 +5,16 @@ OpenZeppelin ERC721 solidity contract compatible with OpenSea - implementing EIP
 
 > *This is the successor of our [previous repository](https://github.com/vzoo/ERC721-with-EIP2981-and-reusable-factory-for-OpenSea). Please use this project as we had some serious security concerns about the implementation of OpenSea and it's registry proxy address concept in the reusable-factory repository descended from the Docs of OS. Code in old repo will be kept for reference.*
 
-#### Progress
+--
+
+### Progress
 
 - ✅ Deployment and Etherscan/Polyscan contract verification with Hardhat tested on Ethereum's Rinkeby and Polygon's Mumbai Testnet
 - 🔁 WIP Deployment on Polygon Mainnet
 
-# 1. How to install dependencies
+---
+
+# 1. How to install required dependencies
 
 Simply clone the repository and run `npm install`.
 
@@ -89,7 +93,7 @@ The output should look like this:
 Take a note of the new contract address, we'll need it for the next step.
 
 ## Sale
-Call `toggleSaleState()` on the contract to enable public sale - call `saleState()` to check result.
+Call `toggleSaleState()` on the contract to enable public sale - and call `saleState()` afterwards to verify the result.
 
 # 5. Verify contract on Etherscan/Polyscan
 Make sure you set up the correct API keys for Etherscan and/or Polyscan - Hardhat will automatically verify the contract based on the chosen network, so you can have both API keys in place at the same time.

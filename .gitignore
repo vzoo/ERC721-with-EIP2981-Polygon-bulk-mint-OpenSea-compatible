@@ -10,6 +10,7 @@ contract-metadata
 contract-images.car
 contract-metadata.car
 VZOOflat.sol
+package-lock.json
 
 # Logs
 logs
